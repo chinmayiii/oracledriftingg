@@ -3,3 +3,4 @@ uvicorn
 databricks-sql-connector
 pydantic
 python-dotenv
+openai

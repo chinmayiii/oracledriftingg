@@ -30,6 +30,8 @@ function App() {
   ]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
+  const [lastChatTime, setLastChatTime] = useState(0);
   const messagesEndRef = useRef(null);
 
   // Simulator State
@@ -83,6 +85,13 @@ function App() {
   const handleChat = async () => {
     if (!chatInput.trim()) return;
 
+    // Rate limiting: allow 1 message per 0.5 seconds
+    const now = Date.now();
+    if (now - lastChatTime < 500) {
+      return;
+    }
+    setLastChatTime(now);
+
     const userMessage = { role: "user", text: chatInput };
     setMessages((prev) => [...prev, userMessage]);
     setChatInput("");
@@ -103,12 +112,33 @@ function App() {
         }),
       });
       const data = await res.json();
-      setMessages((prev) => [...prev, { role: "ai", text: data.reply }]);
+      const replyText = typeof data.reply === "string" ? data.reply : "";
+      const looksLikeQuotaError =
+        /gemini error|quota|rate limit|exceeded|429/i.test(replyText);
+
+      // Check if in demo mode
+      if (
+        data.mode === "demo" ||
+        data.mode === "offline" ||
+        looksLikeQuotaError
+      ) {
+        setDemoMode(true);
+      }
+
+      const finalReply = looksLikeQuotaError
+        ? "⚠️ Gemini quota exceeded. Switching to demo mode."
+        : replyText;
+      setMessages((prev) => [...prev, { role: "ai", text: finalReply }]);
     } catch (e) {
+      console.error("Chat error:", e);
       setMessages((prev) => [
         ...prev,
-        { role: "ai", text: "Error connecting to Gemini." },
+        {
+          role: "ai",
+          text: "⚠️ Connection error. I'm operating in demo mode with cached knowledge.",
+        },
       ]);
+      setDemoMode(true);
     } finally {
       setChatLoading(false);
     }
@@ -214,7 +244,7 @@ function App() {
       </header>
 
       {/* KPI Section */}
-      <div className="grid-4">
+      <div className="grid-2">
         <div className="glass-panel kpi-card">
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span className="kpi-label">Feature PSI Drift</span>
@@ -241,24 +271,6 @@ function App() {
             {metrics.hallucination_rate}
           </span>
           <span className="kpi-meta">Audit set</span>
-        </div>
-        <div className="glass-panel kpi-card">
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span className="kpi-label">Blocks Prevented</span>
-          </div>
-          <span className="kpi-value" style={{ fontSize: "1.5rem" }}>
-            {metrics.blocks_prevented}
-          </span>
-          <span className="kpi-meta">This run</span>
-        </div>
-        <div className="glass-panel kpi-card">
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span className="kpi-label">Fines Saved</span>
-          </div>
-          <span className="kpi-value glow-text" style={{ fontSize: "1.5rem" }}>
-            {metrics.financial_exposure_saved}
-          </span>
-          <span className="kpi-meta">Estimated</span>
         </div>
       </div>
 
@@ -450,6 +462,22 @@ function App() {
             >
               <Bot size={18} className="glow-text" />
               Underwriter Copilot
+              {demoMode && (
+                <span
+                  style={{
+                    fontSize: "0.65rem",
+                    padding: "0.25rem 0.6rem",
+                    borderRadius: "20px",
+                    background: "rgba(245, 158, 11, 0.2)",
+                    border: "1px solid rgba(245, 158, 11, 0.4)",
+                    color: "#f59e0b",
+                    fontWeight: 600,
+                    marginLeft: "0.5rem",
+                  }}
+                >
+                  DEMO MODE
+                </span>
+              )}
             </h3>
             {selectedApp && (
               <p

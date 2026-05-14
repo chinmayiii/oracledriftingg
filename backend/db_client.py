@@ -5,7 +5,7 @@ from databricks import sql
 from dotenv import load_dotenv
 
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
-load_dotenv(dotenv_path)
+load_dotenv(dotenv_path, override=True)
 
 DATABRICKS_SERVER_HOSTNAME = os.getenv("DATABRICKS_SERVER_HOSTNAME") or os.getenv(
     "DATABRICKS_HOST"
@@ -13,6 +13,8 @@ DATABRICKS_SERVER_HOSTNAME = os.getenv("DATABRICKS_SERVER_HOSTNAME") or os.geten
 DATABRICKS_HTTP_PATH = os.getenv("DATABRICKS_HTTP_PATH")
 DATABRICKS_WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID")
 DATABRICKS_TOKEN = os.getenv("DATABRICKS_TOKEN")
+DATABRICKS_CATALOG = os.getenv("DATABRICKS_CATALOG", "workspace")
+DATABRICKS_SCHEMA = os.getenv("DATABRICKS_SCHEMA", "default")
 
 if not DATABRICKS_HTTP_PATH and DATABRICKS_WAREHOUSE_ID:
     DATABRICKS_HTTP_PATH = f"/sql/1.0/warehouses/{DATABRICKS_WAREHOUSE_ID}"
@@ -22,6 +24,8 @@ class DatabricksClient:
     def __init__(self):
         self.is_connected = False
         self.last_error: Optional[str] = None
+        self.table_available = True
+        self.table_error_logged = False
         if DATABRICKS_SERVER_HOSTNAME and DATABRICKS_HTTP_PATH and DATABRICKS_TOKEN:
             try:
                 self.connection = sql.connect(
@@ -60,9 +64,13 @@ class DatabricksClient:
 
     def fetch_audit_records(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Fetches the latest records from the gold_audit_table"""
-        if self.is_connected:
+        if self.is_connected and self.table_available:
             try:
-                query = f"SELECT * FROM workspace.default.gold_audit_table ORDER BY timestamp DESC LIMIT {limit}"
+                query = (
+                    "SELECT * FROM "
+                    f"{DATABRICKS_CATALOG}.{DATABRICKS_SCHEMA}.gold_audit_table "
+                    f"ORDER BY timestamp DESC LIMIT {limit}"
+                )
                 with self.connection.cursor() as cursor:
                     cursor.execute(query)
                     rows = cursor.fetchall()
@@ -91,7 +99,19 @@ class DatabricksClient:
 
                     return data
             except Exception as e:
-                print(f"Error querying Databricks: {e}")
+                error_str = str(e)
+                if (
+                    "TABLE_OR_VIEW_NOT_FOUND" in error_str
+                    or "table or view" in error_str.lower()
+                ):
+                    self.table_available = False
+                    if not self.table_error_logged:
+                        print(
+                            "[WARNING] gold_audit_table not found. Using mock data until table is created."
+                        )
+                        self.table_error_logged = True
+                else:
+                    print(f"Error querying Databricks: {e}")
                 return self._generate_mock_records(limit)
         else:
             return self._generate_mock_records(limit)

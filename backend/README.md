@@ -1,6 +1,6 @@
 # 🔮 The Drifting Oracle — FastAPI Backend
 
-### Secure middleware connecting the React MLOps Dashboard to Databricks Unity Catalog & Google Gemini
+### Secure middleware connecting the React MLOps Dashboard to Databricks Unity Catalog & Groq
 
 ---
 
@@ -9,7 +9,7 @@
 This FastAPI server acts as the **secure bridge** between the React frontend and two critical data sources:
 
 1. **Databricks SQL Warehouse** — Queries the `gold_audit_table` in Unity Catalog for live applicant risk data.
-2. **Google Gemini API** — Powers the Agentic Underwriter Copilot chatbot with real-time GenAI responses grounded in Databricks context.
+2. **Groq API** — Powers the Agentic Underwriter Copilot chatbot with real-time GenAI responses grounded in Databricks context.
 
 > **Why not query Databricks directly from the browser?**  
 > Exposing SQL access tokens in client-side JavaScript is a critical security vulnerability. This backend guarantees token isolation while also enabling graceful mock fallbacks if the Databricks cluster is asleep during a live demo.
@@ -36,7 +36,7 @@ backend/
 | `GET` | `/api/dashboard/metrics` | Returns aggregate KPIs: PSI drift, hallucination rate, blocks prevented, fines saved |
 | `GET` | `/api/dashboard/audit_records?limit=15` | Returns paginated applicant records from `gold_audit_table` |
 | `POST` | `/api/simulate` | Heuristic edge-simulator: accepts `{age, income, duration}` and returns predicted risk + SHAP summary |
-| `POST` | `/api/chat` | Sends user message + applicant context to Google Gemini and returns the AI copilot response |
+| `POST` | `/api/chat` | Sends user message + applicant context to Groq and returns the AI copilot response |
 | `POST` | `/api/trigger_pipeline` | Simulates Databricks Workflow DAG orchestration trigger |
 
 ---
@@ -49,7 +49,8 @@ Create a `.env` file in this directory:
 DATABRICKS_SERVER_HOSTNAME=dbc-xxxxx.cloud.databricks.com
 DATABRICKS_HTTP_PATH=/sql/1.0/warehouses/xxxxxxx
 DATABRICKS_TOKEN=dapiXXXXXXXXXXXXXXXX
-GEMINI_API_KEY=AIzaSyXXXXXXXXXXXXXXX
+GROQ_API_KEY=gskXXXXXXXXXXXXXXXX
+GROQ_MODEL=llama-3.1-8b-instant
 ```
 
 | Variable | Source |
@@ -57,7 +58,8 @@ GEMINI_API_KEY=AIzaSyXXXXXXXXXXXXXXX
 | `DATABRICKS_SERVER_HOSTNAME` | Databricks Workspace → SQL Warehouses → Connection Details |
 | `DATABRICKS_HTTP_PATH` | Same location, under "HTTP Path" |
 | `DATABRICKS_TOKEN` | Databricks → User Settings → Developer → Access Tokens |
-| `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) |
+| `GROQ_API_KEY` | Groq Console → API Keys |
+| `GROQ_MODEL` | Optional model override |
 
 ---
 
@@ -91,8 +93,8 @@ Instead of calling a live Databricks Model Serving endpoint (which takes ~20 min
 ### Mock Fallback (`db_client.py`)
 If the Databricks SQL connection fails (expired token, sleeping warehouse), the backend gracefully degrades to a built-in mock data generator. The React dashboard never crashes — it simply renders synthetic data until the cluster wakes up.
 
-### Gemini Copilot System Prompt
-The `/api/chat` endpoint injects precise applicant context (risk score, SHAP factors, governance label) from the selected table row directly into the Gemini system prompt. This ensures the AI always responds with data-grounded answers rather than generic hallucinations.
+### Groq Copilot System Prompt
+The `/api/chat` endpoint injects precise applicant context (risk score, SHAP factors, governance label) plus RAG policy excerpts into the Groq system prompt. Responses are constrained to cite the database context and include a policy excerpt (or explicitly state none).
 
 ---
 
