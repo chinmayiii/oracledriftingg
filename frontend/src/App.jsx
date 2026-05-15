@@ -276,7 +276,7 @@ function App() {
 
       <div className="main-layout">
         {/* COLUMN 1: EDGE SIMULATOR */}
-        <div className="glass-panel" style={{ padding: "1.5rem" }}>
+        <div className="glass-panel simulator-panel" style={{ padding: "1.5rem" }}>
           <h3
             style={{
               marginBottom: "1rem",
@@ -371,7 +371,7 @@ function App() {
         </div>
 
         {/* COLUMN 2: BATCH LEDGER */}
-        <div className="glass-panel audit-table-wrapper">
+        <div className="glass-panel audit-table-wrapper audit-panel">
           <table className="audit-table">
             <thead>
               <tr>
@@ -444,7 +444,7 @@ function App() {
         </div>
 
         {/* COLUMN 3: COPILOT CHAT */}
-        <div className="glass-panel chat-window">
+        <div className="glass-panel chat-window chat-panel">
           <div
             style={{
               padding: "1rem",
