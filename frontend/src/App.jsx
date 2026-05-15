@@ -12,6 +12,8 @@ import {
 import "./index.css";
 
 function App() {
+  const apiBaseUrl =
+    import.meta.env.VITE_API_URL || "http://localhost:8000";
   const [metrics, setMetrics] = useState(null);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -50,17 +52,17 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const metRes = await fetch("http://localhost:8000/api/dashboard/metrics");
+      const metRes = await fetch(`${apiBaseUrl}/api/dashboard/metrics`);
       setMetrics(await metRes.json());
       const recRes = await fetch(
-        "http://localhost:8000/api/dashboard/audit_records?limit=15",
+        `${apiBaseUrl}/api/dashboard/audit_records?limit=15`,
       );
       const recData = await recRes.json();
       setRecords(recData.data);
     } catch (e) {
       console.error(e);
       setError(
-        "Backend unavailable. Please start the API on http://localhost:8000 and retry.",
+        `Backend unavailable. Please start the API on ${apiBaseUrl} and retry.`,
       );
       setMetrics(null);
       setRecords([]);
@@ -71,7 +73,7 @@ function App() {
 
   const handleSimulate = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/simulate", {
+      const res = await fetch(`${apiBaseUrl}/api/simulate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(simValues),
@@ -103,7 +105,7 @@ function App() {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/api/chat", {
+      const res = await fetch(`${apiBaseUrl}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -148,7 +150,7 @@ function App() {
     if (pipelineState !== "Trigger Databricks Workflow") return;
 
     setPipelineState("Evaluating German Credit Batch...");
-    fetch("http://localhost:8000/api/trigger_pipeline", { method: "POST" });
+    fetch(`${apiBaseUrl}/api/trigger_pipeline`, { method: "POST" });
 
     setTimeout(() => setPipelineState("⚠️ High PSI Drift Detected..."), 1200);
     setTimeout(() => setPipelineState("Retraining AutoML Challenger..."), 2800);
@@ -276,7 +278,10 @@ function App() {
 
       <div className="main-layout">
         {/* COLUMN 1: EDGE SIMULATOR */}
-        <div className="glass-panel simulator-panel" style={{ padding: "1.5rem" }}>
+        <div
+          className="glass-panel simulator-panel"
+          style={{ padding: "1.5rem" }}
+        >
           <h3
             style={{
               marginBottom: "1rem",
