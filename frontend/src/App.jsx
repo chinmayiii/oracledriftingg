@@ -12,8 +12,7 @@ import {
 import "./index.css";
 
 function App() {
-  const apiBaseUrl =
-    import.meta.env.VITE_API_URL || "http://localhost:8000";
+  const apiBaseUrl = import.meta.env.VITE_API_URL;
   const [metrics, setMetrics] = useState(null);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
