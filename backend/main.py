@@ -34,8 +34,10 @@ RAG_MAX_CHUNK_CHARS = int(os.getenv("RAG_MAX_CHUNK_CHARS", "900"))
 RAG_TOP_K = int(os.getenv("RAG_TOP_K", "3"))
 RAG_POLICY_PATH = os.getenv(
     "RAG_POLICY_PATH",
-    os.path.normpath(
-        os.path.join(os.path.dirname(__file__), "..", "data", "rbi_sebi_policy.txt")
+    os.path.join(
+        os.path.dirname(__file__),
+        "data",
+        "rbi_sebi_policy.txt"
     ),
 )
 _rag_chunks: List[str] = []
